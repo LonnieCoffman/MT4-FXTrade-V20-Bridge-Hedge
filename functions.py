@@ -303,7 +303,7 @@ def update_account():
         try:
             rv = client.request(response)
 
-            file = open(static.filepath+"short_account.txt","w")
+            file = open(static.filepath+"account-short.txt","w")
             file.write(str(rv["account"]["balance"])+","+
                        str(rv["account"]["openTradeCount"])+","+
                        str(rv["account"]["marginAvailable"])+","+
@@ -320,7 +320,7 @@ def update_account():
         try:
             rv = client.request(response)
 
-            file = open(static.filepath+"long_account.txt","w")
+            file = open(static.filepath+"account-long.txt","w")
             file.write(str(rv["account"]["balance"])+","+
                        str(rv["account"]["openTradeCount"])+","+
                        str(rv["account"]["marginAvailable"])+","+
