@@ -56,8 +56,9 @@ def delete_lock_file():
 ###############################################################################
 def alive_check():
     try:
-        file = open(static.filepath+"alive_check.txt","w")
-        file.close()
+        if not os.path.isfile(static.filepath+"alive_check"):
+            file = open(static.filepath+"alive_check","w")
+            file.close()
     except Exception as e:
         print(e)
     return
