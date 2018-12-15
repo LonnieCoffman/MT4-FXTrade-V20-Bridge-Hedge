@@ -51,6 +51,17 @@ def delete_lock_file():
         print(e)
     return
 
+###############################################################################
+# create an alive check file - an EA can use this to check if script is running
+###############################################################################
+def alive_check():
+    try:
+        file = open(static.filepath+"alive_check.txt","w")
+        file.close()
+    except Exception as e:
+        print(e)
+    return
+
 #######################################
 # close all positions for an instrument
 #######################################

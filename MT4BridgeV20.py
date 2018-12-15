@@ -3,7 +3,7 @@ import oandapyV20
 import oandapyV20.endpoints.accounts as accounts
 from oandapyV20.exceptions import V20Error
 import functions as bridge
-import time
+import time, datetime
 import static
 
 accountID = static.short_account_id
@@ -17,8 +17,11 @@ else:
 bridge.update_account()
 bridge.update_positions()
 
+alive_timer = 60
+
 while True:
 
+    if (datetime.datetime.now().second % alive_timer == 0): bridge.alive_check()
     bridge.close_positions()
     bridge.open_trades()
 
