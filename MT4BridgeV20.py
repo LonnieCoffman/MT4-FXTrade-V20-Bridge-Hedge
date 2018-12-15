@@ -17,7 +17,7 @@ else:
 bridge.update_account()
 bridge.update_positions()
 
-alive_timer = 60
+alive_timer = 1
 
 while True:
 
