@@ -14,6 +14,7 @@ if (static.live_trading):
 else:
     client = oandapyV20.API(access_token=access_token, environment='practice')
 
+bridge.alive_check()
 bridge.update_account()
 bridge.update_positions()
 

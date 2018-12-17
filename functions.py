@@ -3,11 +3,13 @@ import json
 import oandapyV20
 import oandapyV20.endpoints.accounts as accounts
 import oandapyV20.endpoints.positions as positions
+import oandapyV20.endpoints.trades as trades
 import oandapyV20.endpoints.orders as orders
 from oandapyV20.contrib.requests import MarketOrderRequest
 from oandapyV20.contrib.requests import TakeProfitDetails, StopLossDetails
 from oandapyV20.exceptions import V20Error
 from datetime import datetime, timedelta
+from collections import defaultdict
 import static
 
 CLOSE_POSITION_MESSAGE = '''POSITION CLOSED:  ===============================
@@ -77,6 +79,12 @@ def close_positions():
                     if (numUnits == '0'):
                         numUnits = "ALL"
 
+                    if (side == "buy"):
+                        direction = "long"
+                    
+                    if (side == "sell"):
+                        direction = "short"
+
                     if (static.live_trading):
                         client = oandapyV20.API(static.token, environment='live')
                     else:
@@ -117,20 +125,20 @@ def close_positions():
                         os.remove(static.filepath+fn)
 
                     # delete minmax file
-                    if os.path.isfile(static.filepath+'minmax-'+instrument+'.txt'):
-                        os.remove(static.filepath+'minmax-'+instrument+'.txt')
+                    if os.path.isfile(static.filepath+'minmax-'+direction+'-'+instrument+'.txt'):
+                        os.remove(static.filepath+'minmax-'+direction+'-'+instrument+'.txt')
 
                     # delete stoploss file
-                    if os.path.isfile(static.filepath+'stoploss-'+instrument+'.txt'):
-                        os.remove(static.filepath+'stoploss-'+instrument+'.txt')
+                    if os.path.isfile(static.filepath+'stoploss-'+direction+'-'+instrument+'.txt'):
+                        os.remove(static.filepath+'stoploss-'+direction+'-'+instrument+'.txt')
 
                     # delete entry file
-                    if os.path.isfile(static.filepath+'entry-'+instrument+'.txt'):
-                        os.remove(static.filepath+'entry-'+instrument+'.txt')
+                    if os.path.isfile(static.filepath+'entry-'+direction+'-'+instrument+'.txt'):
+                        os.remove(static.filepath+'entry-'+direction+'-'+instrument+'.txt')
 
                     # delete target file
-                    if os.path.isfile(static.filepath+'target-'+instrument+'.txt'):
-                        os.remove(static.filepath+'target-'+instrument+'.txt')
+                    if os.path.isfile(static.filepath+'target-'+direction+'-'+instrument+'.txt'):
+                        os.remove(static.filepath+'target-'+direction+'-'+instrument+'.txt')
 
                     update_positions()
                     update_account()
@@ -217,6 +225,61 @@ def open_trades():
     return
 
 ######################
+# get Min/Max trades
+######################
+
+def get_minmax_trades():
+
+    if not is_directory_locked():
+        try:
+            create_lock_file()
+            # delete all current positions prior to update
+            for fn in os.listdir(static.filepath): # loop through files in directory
+                if 'minmax-' in fn:
+                    os.remove(static.filepath+fn)
+
+            if (static.live_trading):
+                client = oandapyV20.API(static.token, environment='live')
+            else:
+                client = oandapyV20.API(static.token, environment='practice')
+
+            # get long trades
+            response = trades.TradesList(static.long_account_id)
+            rv = client.request(response)
+            
+            currentTrades = defaultdict(list)
+
+            for trade in rv["trades"]:
+
+                currentTrades[trade["instrument"]].append(trade["price"])
+
+            if currentTrades:
+                for instrument, prices in currentTrades.items():
+                    file = open(static.filepath+"minmax-"+instrument+"-long.txt","w")
+                    file.write(str(min(prices))+","+str(max(prices)))
+                    file.close()
+
+            # get short trades
+            response = trades.TradesList(static.short_account_id)
+            rv = client.request(response)
+            
+            currentTrades = defaultdict(list)
+
+            for trade in rv["trades"]:
+
+                currentTrades[trade["instrument"]].append(trade["price"])
+
+            if currentTrades:
+                for instrument, prices in currentTrades.items():
+                    file = open(static.filepath+"minmax-"+instrument+"-short.txt","w")
+                    file.write(str(min(prices))+","+str(max(prices)))
+                    file.close()
+
+            delete_lock_file()
+        except Exception as e:
+            print(e)
+
+######################
 # update all positions
 ######################
 def update_positions():
@@ -289,6 +352,8 @@ def update_positions():
                            str(avgPrice)+","+
                            str(total))
                 file.close()
+
+            get_minmax_trades()
 
             print("UPDATE POSITIONS: Success")
         except Exception as e:
