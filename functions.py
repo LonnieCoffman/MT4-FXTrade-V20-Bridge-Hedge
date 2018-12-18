@@ -57,12 +57,15 @@ def delete_lock_file():
 # create an alive check file - an EA can use this to check if script is running
 ###############################################################################
 def alive_check():
-    try:
-        if not os.path.isfile(static.filepath+"alive_check"):
-            file = open(static.filepath+"alive_check","w")
-            file.close()
-    except Exception as e:
-        print(e)
+    if not is_directory_locked():
+        try:
+            if not os.path.isfile(static.filepath+"alive_check"):
+                create_lock_file()
+                file = open(static.filepath+"alive_check","w")
+                file.close()
+                delete_lock_file()
+        except Exception as e:
+            print(e)
     return
 
 #######################################
@@ -224,11 +227,11 @@ def open_trades():
             print(e)
     return
 
-######################
-# get Min/Max trades
-######################
+###########################################
+# get Min/Max trades and opening trade time
+###########################################
 
-def get_minmax_trades():
+def get_trade_data():
 
     if not is_directory_locked():
         try:
@@ -237,21 +240,25 @@ def get_minmax_trades():
             for fn in os.listdir(static.filepath): # loop through files in directory
                 if 'minmax-' in fn:
                     os.remove(static.filepath+fn)
+                if 'time-' in fn:
+                    os.remove(static.filepath+fn)
 
             if (static.live_trading):
-                client = oandapyV20.API(static.token, environment='live')
+                client = oandapyV20.API(static.token, environment='live',headers={"Accept-Datetime-Format":"Unix"})
             else:
-                client = oandapyV20.API(static.token, environment='practice')
+                client = oandapyV20.API(static.token, environment='practice',headers={"Accept-Datetime-Format":"Unix"})
 
             # get long trades
             response = trades.TradesList(static.long_account_id)
             rv = client.request(response)
             
             currentTrades = defaultdict(list)
+            currentTradeTimes = defaultdict(list)
 
             for trade in rv["trades"]:
 
                 currentTrades[trade["instrument"]].append(trade["price"])
+                currentTradeTimes[trade["instrument"]].append(trade["openTime"])
 
             if currentTrades:
                 for instrument, prices in currentTrades.items():
@@ -259,20 +266,36 @@ def get_minmax_trades():
                     file.write(str(min(prices))+","+str(max(prices)))
                     file.close()
 
+            if currentTradeTimes:
+                for instrument, times in currentTradeTimes.items():
+                    file = open(static.filepath+"time-"+instrument+"-long.txt","w")
+                    file.write(str(min(times)).split('.')[0])
+                    file.close()
+
             # get short trades
             response = trades.TradesList(static.short_account_id)
             rv = client.request(response)
             
+            # print(rv)
+
             currentTrades = defaultdict(list)
+            currentTradeTimes = defaultdict(list)
 
             for trade in rv["trades"]:
 
                 currentTrades[trade["instrument"]].append(trade["price"])
+                currentTradeTimes[trade["instrument"]].append(trade["openTime"])
 
             if currentTrades:
                 for instrument, prices in currentTrades.items():
                     file = open(static.filepath+"minmax-"+instrument+"-short.txt","w")
                     file.write(str(min(prices))+","+str(max(prices)))
+                    file.close()
+
+            if currentTradeTimes:
+                for instrument, times in currentTradeTimes.items():
+                    file = open(static.filepath+"time-"+instrument+"-short.txt","w")
+                    file.write(str(min(times)).split('.')[0])
                     file.close()
 
             delete_lock_file()
@@ -353,7 +376,7 @@ def update_positions():
                            str(total))
                 file.close()
 
-            get_minmax_trades()
+            get_trade_data()
 
             print("UPDATE POSITIONS: Success")
         except Exception as e:
