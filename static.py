@@ -5,7 +5,7 @@ filepath = "C:\\Path\\to\\mql4\\Files\\FXtrade\\"
 short_account_id = "000-000-0000000-000"
 long_account_id =  "000-000-0000000-000"
 
-# you api token
+# your api token
 token = "00000000000000000000000000000000-00000000000000000000000000000000"
 
 # set to False for demo trading and True for live trading
